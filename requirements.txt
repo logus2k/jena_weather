@@ -1,10 +1,10 @@
 pandas
 numpy
 scikit-learn
+tqdm
 mlflow
 pyyaml
-keras
-tensorflow
+tensorflow[and-cuda]
 dvc[s3]
 hydra-core
 omegaconf
