@@ -6,3 +6,5 @@ pyyaml
 keras
 tensorflow
 dvc[s3]
+hydra-core
+omegaconf
