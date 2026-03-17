@@ -1,0 +1,10 @@
+pandas
+numpy
+scikit-learn
+mlflow
+pyyaml
+keras
+tensorflow
+dvc[s3]
+hydra-core
+omegaconf
