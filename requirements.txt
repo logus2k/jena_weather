@@ -3,6 +3,7 @@ numpy
 scikit-learn
 tqdm
 mlflow
+plotly
 pyyaml
 tensorflow[and-cuda]
 dvc[s3]
