@@ -15,7 +15,15 @@ data:
     test: 0.15
 
 model:
-  type: LinearRegression
+  type: GRU
+  units1: 128
+  units2: 64
+  dropout: 0.2
+
+training:
+  epochs: 30
+  batch_size: 256
+  learning_rate: 0.0005
 
 forecast:
   strategy: 1-step ahead
