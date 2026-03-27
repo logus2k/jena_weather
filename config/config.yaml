@@ -1,24 +1,6 @@
-data:
-  file: data/jena_climate_2009_2016.csv
-  resample_freq: 1h
-  features:
-    - T (degC)
-    - p (mbar)
-    - rh (%)
-    - wv (m/s)
-    - max. wv (m/s)
-    - wd (deg)
-  target: T (degC)
-  split:
-    train: 0.70
-    val: 0.15
-    test: 0.15
-
-model:
-  type: GRU
-  units1: 128
-  units2: 64
-  dropout: 0.2
+defaults:
+  - model: gru
+  - data: default
 
 training:
   epochs: 30
