@@ -2,11 +2,16 @@
 Jena Weather training pipeline DAG.
 
 4-stage pipeline: Ingest -> Preprocess -> Train -> Evaluate.
-Calls the modular scripts in src/ with config built from DAG params.
+Uses Hydra config files directly for configuration.
 """
 
 import os
 import sys
+
+# Suppress TensorFlow C++ runtime warnings
+os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '3')
+os.environ.setdefault('TF_ENABLE_ONEDNN_OPTS', '0')
+os.environ.setdefault('GRPC_VERBOSITY', 'ERROR')
 from airflow.sdk import dag, task, Param
 from airflow.models import Variable
 from datetime import datetime
@@ -16,38 +21,58 @@ _schedule = Variable.get("jena_training_pipeline_schedule", default_var=None)
 
 # Project root inside the Airflow worker container
 PROJECT_ROOT = "/opt/airflow/dags/jena_weather"
+CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
 
 
-def _build_cfg(params):
-    """Build an OmegaConf DictConfig from DAG params, mirroring config.yaml."""
+def _compose_cfg(params):
+    """Compose config from Hydra YAML files with optional DAG param overrides."""
+    import yaml
     from omegaconf import OmegaConf
 
-    cfg_dict = {
-        "model": {
-            "type": params["model_type"],
-            "units1": params.get("units1", 128),
-            "units2": params.get("units2", 64),
-            "dropout": params.get("dropout", 0.2),
-        },
-        "data": {
-            "file": "data/jena_climate_2009_2016.csv",
-            "resample_freq": "1h",
-            "features": [
-                "T (degC)", "p (mbar)", "rh (%)",
-                "wv (m/s)", "max. wv (m/s)", "wd (deg)",
-            ],
-            "target": "T (degC)",
-            "split": {"train": 0.70, "val": 0.15, "test": 0.15},
-            "sequence_length": 120,
-            "forecast_horizon": 24,
-        },
-        "training": {
-            "epochs": params["epochs"],
-            "batch_size": params["batch_size"],
-            "learning_rate": params["learning_rate"],
-        },
-    }
-    return OmegaConf.create(cfg_dict)
+    # Load base config
+    with open(os.path.join(CONFIG_DIR, "config.yaml")) as f:
+        base = yaml.safe_load(f) or {}
+
+    # Extract defaults list and remove from base
+    defaults = base.pop("defaults", [])
+
+    # Determine group selections - use DAG param override or Hydra default
+    group_selections = {}
+    for entry in defaults:
+        if isinstance(entry, dict):
+            for group, default_option in entry.items():
+                group_selections[group] = default_option
+
+    # Override model group from DAG params if provided
+    model_type = params.get("model_type", "").lower()
+    if model_type:
+        group_selections["model"] = model_type
+
+    # Merge group configs into base
+    for group, option in group_selections.items():
+        group_file = os.path.join(CONFIG_DIR, group, f"{option}.yaml")
+        if os.path.isfile(group_file):
+            with open(group_file) as f:
+                group_config = yaml.safe_load(f) or {}
+            base[group] = {**base.get(group, {}), **group_config}
+
+    # Apply training param overrides from DAG params (if custom values provided)
+    if params.get("epochs") is not None:
+        base.setdefault("training", {})["epochs"] = int(params["epochs"])
+    if params.get("batch_size") is not None:
+        base.setdefault("training", {})["batch_size"] = int(params["batch_size"])
+    if params.get("learning_rate") is not None:
+        base.setdefault("training", {})["learning_rate"] = float(params["learning_rate"])
+
+    # Apply model param overrides (for custom mode)
+    if params.get("units1") is not None:
+        base.setdefault("model", {})["units1"] = int(params["units1"])
+    if params.get("units2") is not None:
+        base.setdefault("model", {})["units2"] = int(params["units2"])
+    if params.get("dropout") is not None:
+        base.setdefault("model", {})["dropout"] = float(params["dropout"])
+
+    return OmegaConf.create(base)
 
 
 def _add_project_to_path():
@@ -63,8 +88,8 @@ def _add_project_to_path():
     catchup=False,
     tags=["noted", "jena_weather", "training"],
     params={
-        "model_type": Param("GRU", type="string", description="Model architecture"),
-        "epochs": Param(10, type="integer", description="Training epochs"),
+        "model_type": Param("GRU", type="string", description="Model architecture (from Hydra model group)"),
+        "epochs": Param(30, type="integer", description="Training epochs"),
         "batch_size": Param(256, type="integer", description="Batch size"),
         "learning_rate": Param(0.0005, type="number", description="Learning rate"),
         "units1": Param(128, type="integer", description="GRU first layer units"),
@@ -83,7 +108,7 @@ def jena_training_pipeline():
         from src.ingestion.ingest import ingest
 
         params = context["params"]
-        cfg = _build_cfg(params)
+        cfg = _compose_cfg(params)
         df = ingest(cfg, project_root=PROJECT_ROOT)
 
         # Save to temp parquet for the next task
@@ -102,10 +127,9 @@ def jena_training_pipeline():
         from src.preprocessing.preprocess import preprocess
 
         params = context["params"]
-        cfg = _build_cfg(params)
+        cfg = _compose_cfg(params)
 
         df_raw = pd.read_parquet(ingest_path)
-        # Restore Date Time as datetime (parquet preserves the type)
         result = preprocess(df_raw, cfg)
 
         # Save arrays and scaler for the next task
@@ -133,7 +157,7 @@ def jena_training_pipeline():
         from src.training.train import train
 
         params = context["params"]
-        cfg = _build_cfg(params)
+        cfg = _compose_cfg(params)
 
         # Load preprocessed data
         arrays = np.load(os.path.join(prep_dir, "arrays.npz"))
@@ -173,6 +197,9 @@ def jena_training_pipeline():
             run_id = mlflow.active_run().info.run_id
             joblib.dump(run_id, os.path.join(out_dir, "run_id.joblib"))
 
+            # Push MLflow run ID to XCom for noted's DAG run history
+            context["ti"].xcom_push(key="mlflow_run_id", value=run_id)
+
             print(f"[DAG] Training complete. MLflow run: {run_id}")
             return out_dir
 
@@ -186,7 +213,7 @@ def jena_training_pipeline():
         from src.evaluation.evaluate import evaluate
 
         params = context["params"]
-        cfg = _build_cfg(params)
+        cfg = _compose_cfg(params)
         register = params.get("register_model", False)
 
         # Load training results
