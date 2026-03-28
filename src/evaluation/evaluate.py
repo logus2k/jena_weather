@@ -9,7 +9,8 @@ import os
 import tempfile
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")
+if 'inline' not in matplotlib.get_backend().lower():
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import mlflow
 
@@ -82,6 +83,7 @@ def evaluate(train_result, cfg, register_model=False, model_name="JenaWeatherGRU
         fig1 = _plot_predictions(y_test_c.reshape(-1), y_pred_c.reshape(-1))
         path1 = os.path.join(tmpdir, "predictions_vs_actual.png")
         fig1.savefig(path1, dpi=150)
+        plt.show()
         plt.close(fig1)
         mlflow.log_artifact(path1)
         print(f"[Evaluation] Logged artifact: predictions_vs_actual.png")
@@ -90,6 +92,7 @@ def evaluate(train_result, cfg, register_model=False, model_name="JenaWeatherGRU
         fig2 = _plot_horizon_mae(y_test_c, y_pred_c)
         path2 = os.path.join(tmpdir, "horizon_mae.png")
         fig2.savefig(path2, dpi=150)
+        plt.show()
         plt.close(fig2)
         mlflow.log_artifact(path2)
         print(f"[Evaluation] Logged artifact: horizon_mae.png")
@@ -103,13 +106,13 @@ def evaluate(train_result, cfg, register_model=False, model_name="JenaWeatherGRU
             import tensorflow as tf
             mlflow.tensorflow.log_model(
                 model,
-                artifact_path="model",
+                name="model",
                 registered_model_name=model_name,
             )
         elif model_type == "Linear":
             mlflow.sklearn.log_model(
                 model,
-                artifact_path="model",
+                name="model",
                 registered_model_name=model_name,
             )
 
@@ -123,9 +126,9 @@ def evaluate(train_result, cfg, register_model=False, model_name="JenaWeatherGRU
         # Log model as artifact without registering
         if model_type == "GRU":
             import tensorflow as tf
-            mlflow.tensorflow.log_model(model, artifact_path="model")
+            mlflow.tensorflow.log_model(model, name="model")
         elif model_type == "Linear":
-            mlflow.sklearn.log_model(model, artifact_path="model")
+            mlflow.sklearn.log_model(model, name="model")
         print(f"[Evaluation] Model logged as artifact (not registered)")
 
     return {

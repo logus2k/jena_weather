@@ -45,6 +45,8 @@ class _MLflowEpochLogger:
     """Keras callback that logs per-epoch metrics to MLflow."""
 
     def __init__(self):
+        import os
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
         import tensorflow as tf
         from tensorflow import keras
         self._base = keras.callbacks.Callback
