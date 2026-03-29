@@ -13,6 +13,39 @@ if 'inline' not in matplotlib.get_backend().lower():
     matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import mlflow
+from mlflow.models import infer_signature
+
+
+def _infer_model_signature(model, y_pred_c):
+    """Infer MLflow model signature from the model's input/output shapes.
+
+    Works for Keras, sklearn, and other models by generating a dummy input
+    matching the model's expected shape and using the actual prediction output.
+    """
+    try:
+        sample_input = None
+        sample_output = y_pred_c[:1] if y_pred_c is not None else None
+
+        # Keras/TF model
+        if hasattr(model, 'input_shape'):
+            shape = model.input_shape
+            # Replace None (batch dim) with 1
+            concrete_shape = tuple(s if s is not None else 1 for s in shape)
+            sample_input = np.random.randn(*concrete_shape).astype(np.float32)
+            if sample_output is None:
+                sample_output = model.predict(sample_input, verbose=0)
+
+        # sklearn model
+        elif hasattr(model, 'n_features_in_'):
+            sample_input = np.random.randn(1, model.n_features_in_).astype(np.float32)
+            if sample_output is None:
+                sample_output = model.predict(sample_input)
+
+        if sample_input is not None and sample_output is not None:
+            return infer_signature(sample_input, sample_output)
+    except Exception:
+        pass
+    return None
 
 
 def _plot_predictions(y_true, y_pred, n_points=500):
@@ -97,38 +130,30 @@ def evaluate(train_result, cfg, register_model=False, model_name="JenaWeatherGRU
         mlflow.log_artifact(path2)
         print(f"[Evaluation] Logged artifact: horizon_mae.png")
 
+    # Infer model signature automatically
+    signature = _infer_model_signature(model, y_pred_c)
+
     # Model registration
     model_version = None
+    log_kwargs = {"name": "model", "signature": signature}
+
     if register_model:
         print(f"[Evaluation] Registering model as '{model_name}'...")
+        log_kwargs["registered_model_name"] = model_name
 
-        if model_type == "GRU":
-            import tensorflow as tf
-            mlflow.tensorflow.log_model(
-                model,
-                name="model",
-                registered_model_name=model_name,
-            )
-        elif model_type == "Linear":
-            mlflow.sklearn.log_model(
-                model,
-                name="model",
-                registered_model_name=model_name,
-            )
+    if model_type == "GRU":
+        import tensorflow as tf
+        mlflow.tensorflow.log_model(model, **log_kwargs)
+    elif model_type == "Linear":
+        mlflow.sklearn.log_model(model, **log_kwargs)
 
-        # Get the latest version number
+    if register_model:
         client = mlflow.tracking.MlflowClient()
         versions = client.search_model_versions(f"name='{model_name}'")
         if versions:
             model_version = max(int(v.version) for v in versions)
             print(f"[Evaluation] Registered: {model_name} v{model_version}")
     else:
-        # Log model as artifact without registering
-        if model_type == "GRU":
-            import tensorflow as tf
-            mlflow.tensorflow.log_model(model, name="model")
-        elif model_type == "Linear":
-            mlflow.sklearn.log_model(model, name="model")
         print(f"[Evaluation] Model logged as artifact (not registered)")
 
     return {

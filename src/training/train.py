@@ -2,10 +2,23 @@
 Training module for Jena Climate forecasting.
 
 Supports GRU (Keras) and Linear (sklearn) models, with MLflow tracking.
+MLflow calls only log when a run is active (started by Run Manager, DAG, or user code).
 """
 
 import numpy as np
 import mlflow
+
+
+def _log_param(key, value):
+    """Log param only if an MLflow run is active."""
+    if mlflow.active_run():
+        mlflow.log_param(key, value)
+
+
+def _log_metric(key, value, step=None):
+    """Log metric only if an MLflow run is active."""
+    if mlflow.active_run():
+        mlflow.log_metric(key, value, step=step)
 
 
 def _build_gru_model(seq_len, n_features, horizon, cfg):
@@ -61,10 +74,10 @@ class _MLflowEpochLogger:
             def on_epoch_end(self, epoch, logs=None):
                 if logs is None:
                     return
-                mlflow.log_metric("train_loss", logs.get("loss", 0), step=epoch)
-                mlflow.log_metric("val_loss", logs.get("val_loss", 0), step=epoch)
-                mlflow.log_metric("train_mae", logs.get("mae", 0), step=epoch)
-                mlflow.log_metric("val_mae", logs.get("val_mae", 0), step=epoch)
+                _log_metric("train_loss", logs.get("loss", 0), step=epoch)
+                _log_metric("val_loss", logs.get("val_loss", 0), step=epoch)
+                _log_metric("train_mae", logs.get("mae", 0), step=epoch)
+                _log_metric("val_mae", logs.get("val_mae", 0), step=epoch)
 
         return EpochLogger()
 
@@ -105,19 +118,19 @@ def train(prep_result, cfg):
     n_features = X_train.shape[2]
 
     # Log all config params to MLflow
-    mlflow.log_param("model_type", model_type)
-    mlflow.log_param("epochs", epochs)
-    mlflow.log_param("batch_size", batch_size)
-    mlflow.log_param("learning_rate", float(cfg.training.learning_rate))
-    mlflow.log_param("sequence_length", seq_len)
-    mlflow.log_param("forecast_horizon", horizon)
-    mlflow.log_param("n_features", n_features)
-    mlflow.log_param("train_samples", X_train.shape[0])
+    _log_param("model_type", model_type)
+    _log_param("epochs", epochs)
+    _log_param("batch_size", batch_size)
+    _log_param("learning_rate", float(cfg.training.learning_rate))
+    _log_param("sequence_length", seq_len)
+    _log_param("forecast_horizon", horizon)
+    _log_param("n_features", n_features)
+    _log_param("train_samples", X_train.shape[0])
 
     if model_type == "GRU":
-        mlflow.log_param("units1", int(cfg.model.units1))
-        mlflow.log_param("units2", int(cfg.model.units2))
-        mlflow.log_param("dropout", float(cfg.model.dropout))
+        _log_param("units1", int(cfg.model.units1))
+        _log_param("units2", int(cfg.model.units2))
+        _log_param("dropout", float(cfg.model.dropout))
 
     print(f"[Training] Model: {model_type}, Epochs: {epochs}, Batch: {batch_size}")
 
@@ -137,7 +150,7 @@ def train(prep_result, cfg):
         ]
 
         # Log total_epochs for noted's epoch progress bar
-        mlflow.log_metric("total_epochs", epochs, step=0)
+        _log_metric("total_epochs", epochs, step=0)
 
         history = model.fit(
             X_train, y_train,
@@ -167,8 +180,8 @@ def train(prep_result, cfg):
         from sklearn.metrics import mean_absolute_error
         train_mae = mean_absolute_error(y_train.reshape(-1), model.predict(X_tr_flat).reshape(-1))
         val_mae = mean_absolute_error(y_val.reshape(-1), model.predict(X_val_flat).reshape(-1))
-        mlflow.log_metric("train_mae", train_mae)
-        mlflow.log_metric("val_mae", val_mae)
+        _log_metric("train_mae", train_mae)
+        _log_metric("val_mae", val_mae)
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -189,9 +202,9 @@ def train(prep_result, cfg):
     test_rmse = float(np.sqrt(mean_squared_error(yt, yp)))
     test_r2 = float(r2_score(yt, yp))
 
-    mlflow.log_metric("test_mae", test_mae)
-    mlflow.log_metric("test_rmse", test_rmse)
-    mlflow.log_metric("test_r2", test_r2)
+    _log_metric("test_mae", test_mae)
+    _log_metric("test_rmse", test_rmse)
+    _log_metric("test_r2", test_r2)
 
     print(f"[Training] Test MAE:  {test_mae:.4f} degC")
     print(f"[Training] Test RMSE: {test_rmse:.4f} degC")
