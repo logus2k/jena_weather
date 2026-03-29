@@ -118,8 +118,9 @@ def evaluate(train_result, cfg, register_model=False, model_name="JenaWeatherGRU
         fig1.savefig(path1, dpi=150)
         plt.show()
         plt.close(fig1)
-        mlflow.log_artifact(path1)
-        print(f"[Evaluation] Logged artifact: predictions_vs_actual.png")
+        if mlflow.active_run():
+            mlflow.log_artifact(path1)
+            print(f"[Evaluation] Logged artifact: predictions_vs_actual.png")
 
         # Per-horizon MAE
         fig2 = _plot_horizon_mae(y_test_c, y_pred_c)
@@ -127,34 +128,34 @@ def evaluate(train_result, cfg, register_model=False, model_name="JenaWeatherGRU
         fig2.savefig(path2, dpi=150)
         plt.show()
         plt.close(fig2)
-        mlflow.log_artifact(path2)
-        print(f"[Evaluation] Logged artifact: horizon_mae.png")
+        if mlflow.active_run():
+            mlflow.log_artifact(path2)
+            print(f"[Evaluation] Logged artifact: horizon_mae.png")
 
-    # Infer model signature automatically
-    signature = _infer_model_signature(model, y_pred_c)
-
-    # Model registration
+    # Only log model and register if an MLflow run is active
     model_version = None
-    log_kwargs = {"name": "model", "signature": signature}
+    if mlflow.active_run():
+        signature = _infer_model_signature(model, y_pred_c)
+        log_kwargs = {"name": "model", "signature": signature}
 
-    if register_model:
-        print(f"[Evaluation] Registering model as '{model_name}'...")
-        log_kwargs["registered_model_name"] = model_name
+        if register_model:
+            print(f"[Evaluation] Registering model as '{model_name}'...")
+            log_kwargs["registered_model_name"] = model_name
 
-    if model_type == "GRU":
-        import tensorflow as tf
-        mlflow.tensorflow.log_model(model, **log_kwargs)
-    elif model_type == "Linear":
-        mlflow.sklearn.log_model(model, **log_kwargs)
+        if model_type == "GRU":
+            import tensorflow as tf
+            mlflow.tensorflow.log_model(model, **log_kwargs)
+        elif model_type == "Linear":
+            mlflow.sklearn.log_model(model, **log_kwargs)
 
-    if register_model:
-        client = mlflow.tracking.MlflowClient()
-        versions = client.search_model_versions(f"name='{model_name}'")
-        if versions:
-            model_version = max(int(v.version) for v in versions)
-            print(f"[Evaluation] Registered: {model_name} v{model_version}")
-    else:
-        print(f"[Evaluation] Model logged as artifact (not registered)")
+        if register_model:
+            client = mlflow.tracking.MlflowClient()
+            versions = client.search_model_versions(f"name='{model_name}'")
+            if versions:
+                model_version = max(int(v.version) for v in versions)
+                print(f"[Evaluation] Registered: {model_name} v{model_version}")
+        else:
+            print(f"[Evaluation] Model logged as artifact (not registered)")
 
     return {
         "test_metrics": metrics,
