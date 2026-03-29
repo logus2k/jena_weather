@@ -180,6 +180,13 @@ def jena_training_pipeline():
                 mlflow.set_tag("hydra.config_hash", params["hydra_config_hash"])
                 mlflow.log_param("hydra_config_hash", params["hydra_config_hash"])
 
+            # Log DVC dataset hashes (sent from noted's Run DAG panel)
+            dvc_datasets = params.get("_dvc_datasets", [])
+            for ds in dvc_datasets:
+                mlflow.set_tag("dvc.data_hash", ds.get("hash", ""))
+                mlflow.set_tag("dvc.data_file", ds.get("path", ""))
+                mlflow.log_param("dvc_data_hash", ds.get("hash", ""))
+
             result = train(prep_result, cfg)
 
             # Save train result for evaluation task
