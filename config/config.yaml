@@ -1,21 +1,9 @@
-data:
-  file: data/jena_climate_2009_2016.csv
-  resample_freq: 1h
-  features:
-    - T (degC)
-    - p (mbar)
-    - rh (%)
-    - wv (m/s)
-    - max. wv (m/s)
-    - wd (deg)
-  target: T (degC)
-  split:
-    train: 0.70
-    val: 0.15
-    test: 0.15
+defaults:
+  - data: default
+  - model: gru_baseline
+  - training: default
+  - scaler: standard
+  - evolution: default
+  - timegan: default
 
-model:
-  type: LinearRegression
-
-forecast:
-  strategy: 1-step ahead
+seed: 42

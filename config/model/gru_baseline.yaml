@@ -1,0 +1,13 @@
+type: GRU
+n_layers: 2
+units1: 96
+units2: 64
+units3: 96
+dropout: 0.0
+l2: 1.0e-6
+dense_units: null
+dense_activation: linear
+gaussian_noise_std: 0.0
+optimizer_name: adam
+weight_decay: 0.0
+loss_name: mse

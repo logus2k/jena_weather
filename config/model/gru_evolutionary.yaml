@@ -1,0 +1,15 @@
+# Best configuration discovered by evolutionary search
+# Values to be filled after EA run completes
+type: GRU
+n_layers: 2
+units1: 128
+units2: 96
+units3: 64
+dropout: 0.1
+l2: 1.0e-5
+dense_units: null
+dense_activation: linear
+gaussian_noise_std: 0.0
+optimizer_name: adam
+weight_decay: 0.0
+loss_name: mse
