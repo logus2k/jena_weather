@@ -142,11 +142,16 @@ def evaluate(train_result, cfg, register_model=False, model_name="JenaWeatherGRU
             print(f"[Evaluation] Registering model as '{model_name}'...")
             log_kwargs["registered_model_name"] = model_name
 
+        model_info = None
         if model_type == "GRU":
             import tensorflow as tf
-            mlflow.tensorflow.log_model(model, **log_kwargs)
+            model_info = mlflow.tensorflow.log_model(model, **log_kwargs)
         elif model_type == "Linear":
-            mlflow.sklearn.log_model(model, **log_kwargs)
+            model_info = mlflow.sklearn.log_model(model, **log_kwargs)
+
+        # Store the direct model URI as a tag for reliable loading (MLflow 3.x)
+        if model_info and hasattr(model_info, 'model_uri'):
+            mlflow.set_tag("noted.model_uri", model_info.model_uri)
 
         if register_model:
             client = mlflow.tracking.MlflowClient()

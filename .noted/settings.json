@@ -1,3 +1,7 @@
 {
-  "auto_tracking": false
+  "auto_tracking": false,
+  "default_venv": {
+    "name": "venv_jena_weather",
+    "runtime_id": "python/3.12"
+  }
 }

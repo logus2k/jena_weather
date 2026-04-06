@@ -5,15 +5,15 @@ Supports GRU (Keras) and Linear (sklearn) models, with MLflow tracking.
 MLflow calls only log when a run is active (started by Run Manager, DAG, or user code).
 """
 
-import numpy as np
 import mlflow
+import numpy as np
+
 
 
 def _log_param(key, value):
     """Log param only if an MLflow run is active."""
     if mlflow.active_run():
         mlflow.log_param(key, value)
-
 
 def _log_metric(key, value, step=None):
     """Log metric only if an MLflow run is active."""
@@ -23,7 +23,6 @@ def _log_metric(key, value, step=None):
 
 def _build_gru_model(seq_len, n_features, horizon, cfg):
     """Build a stacked GRU model with Keras."""
-    import tensorflow as tf
     from tensorflow import keras
 
     units1 = int(cfg.model.units1)
@@ -60,11 +59,9 @@ class _MLflowEpochLogger:
     def __init__(self):
         import os
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-        import tensorflow as tf
         from tensorflow import keras
         self._base = keras.callbacks.Callback
         # Build dynamically so the class inherits at runtime
-        pass
 
     @staticmethod
     def create():

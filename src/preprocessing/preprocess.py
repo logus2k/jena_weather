@@ -13,6 +13,8 @@ import pandas as pd
 from numpy.lib.stride_tricks import sliding_window_view
 from sklearn.preprocessing import StandardScaler
 
+import xpto
+
 
 def _fix_sensor_errors(df):
     """Replace -9999.0 equipment failures in wind columns with NaN."""
@@ -74,6 +76,7 @@ def _make_windows(data, target_idx, seq_len, horizon):
     X = X.transpose(0, 2, 1)[:n_samples].copy()
     y = sliding_window_view(data[seq_len:, target_idx], window_shape=horizon)
     y = y[:n_samples].copy()
+  
     return X, y
 
 
