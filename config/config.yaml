@@ -3,7 +3,5 @@ defaults:
   - model: gru_baseline
   - training: default
   - scaler: standard
-  - evolution: default
-  - timegan: default
 
 seed: 42
