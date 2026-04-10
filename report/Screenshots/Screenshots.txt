@@ -1,0 +1,68 @@
+Introductory paragraph (Section 2, after the Docker Compose table):
+
+Beyond the infrastructure layer, noted presents a unified interface that consolidates every MLOps domain into a single application. Figure 1 shows the platform's VS Code-inspired layout: a persistent icon bar on the left provides one-click access to each workspace section; a collapsible Explorer sidebar exposes the full project tree alongside the complete MLOps artifact hierarchy (Data Catalog, Experiments, Model Registry, Environments, Storage, Orchestration, APIs, Assistant, Knowledge Base); a tabbed center pane hosts notebooks, file editors, pipeline views, and service tabs; and a persistent AI assistant panel occupies the right column with awareness of the active notebook, MLflow runs, DVC datasets, and Airflow DAGs. Notably, the bottom status bar shows the jena_training_pipeline executing in the background — demonstrating that pipeline orchestration and interactive notebook work proceed concurrently within the same session.
+
+Caption:
+
+Figure 1 — noted workspace interface with the jena_weather project open. The Explorer sidebar (left) exposes the full project structure and MLOps artifact hierarchy. The center pane displays a 24-hour multi-step temperature forecast comparing the GRU baseline against the persistence model. The AI assistant (right) is running a local Gemma 4 model. The bottom status bar confirms a pipeline run is active concurrently.
+
+------------
+
+
+
+Perfect — same panel as before, clean and complete. This is the one to use.
+All the key elements are visible: the 4 config group dropdowns, the seed override, the templates system, the Compose button, the SHA-256 hash, and the full resolved YAML with real values (lookback: 120, horizon: 24, 6 features, train/val/test split, model type GRU). Scroll position is good — you can see the model section starting at the bottom which proves there's more config below.
+
+Introductory paragraph (Section 3.2, after the config directory tree):
+
+The noted interface exposes Hydra's configuration system through a dedicated Configuration Composer panel, shown in Figure 2. Rather than editing YAML files directly, practitioners select options from each config group via dropdowns — dataset parameters, model architecture, scaler type, and training hyperparameters are composed on demand. Clicking "Compose" resolves the full configuration and displays the resulting YAML alongside a SHA-256 hash of the composed output. This hash is automatically logged as both an MLflow parameter and a run tag on every experiment, creating a direct and auditable link between a model's performance and the exact configuration that produced it. The seed override field and templates system allow practitioners to save and reload frequently used configurations, ensuring consistent hyperparameter management across notebook experiments and Airflow pipeline runs alike.
+
+Caption:
+
+Figure 2 — Hydra Configuration Composer panel. The four config groups (data, model, scaler, training) are resolved into a single composed YAML, with a SHA-256 hash generated for reproducibility tracking. The resolved configuration shows the full dataset specification (6 meteorological features, 120-step lookback, 24-step forecast horizon) and model architecture. This hash is automatically injected into every MLflow run as hydra_config_hash.
+
+
+--------------
+
+
+Introductory paragraph (Section 4.1, after the task description list):
+
+Figure 3 shows noted's native Orchestration view for the jena_training_pipeline DAG. This purpose-built interface renders the full task graph, surfaces pipeline metadata, exposes execution controls, and maintains a run history — all without opening a separate Airflow browser tab. The parallel branch architecture is clearly visible: after data ingestion and preprocessing, evidently_quality and train_model_task execute concurrently, with promote_model and evidently_drift completing the pipeline. The sidebar tree shows three previous successful executions with their timestamps, confirming the pipeline has been validated across multiple runs. The visual schedule builder at the bottom supports cron-based scheduling through human-readable presets, making recurring pipeline execution accessible without requiring Airflow UI access or cron syntax knowledge.
+
+Caption:
+
+Figure 3 — noted's native Orchestration view for the jena_training_pipeline DAG. The task graph shows the 6-task parallel architecture with pipeline metadata (status, tags, owner) and three prior successful runs visible in the sidebar tree. The "Run DAG" button triggers immediate execution. The visual schedule builder (bottom) generates valid cron expressions from presets such as @daily, Every 6h, and Weekdays 9am.
+
+------
+
+
+Introductory paragraph (Section 5.2, replacing the plain text table):
+
+Figure 4 shows noted's native experiment leaderboard for the Jena Weather Forecasting experiment. Rather than navigating to the MLflow UI, practitioners access a purpose-built comparison view directly within the noted workspace. The leaderboard displays all 8 completed runs with their full metric sets — training loss, MAE, RMSE, scaled variants, and validation metrics — with best values highlighted per column for immediate visual identification of the strongest run. An active filter (model_type=GRU, lr>0.001, epochs>=30) narrows the view to relevant configurations. The run list distinguishes between Airflow pipeline runs and notebook-originated runs by name, and the sidebar tree lists each execution individually with timestamps and completion status. The "Promote Best" action saves the best run's parameters as a reusable Hydra template, directly closing the loop between experiment results and future pipeline configuration.
+
+Caption:
+
+Figure 4 — noted's native experiment leaderboard for the Jena Weather Forecasting experiment (8 runs). Best metric values are highlighted per column — the strongest pipeline run achieves a test MAE of 1.679°C and RMSE of 2.224°C. Pipeline runs sourced from Airflow are distinguished from notebook runs by name prefix. The active filter, column selector, CSV export, and "Promote Best" action are all noted-native features built on top of the MLflow tracking backend.
+
+-----------
+
+Introductory paragraph (Section 5.3 / Section 6, before serving):
+
+Figure 5 shows noted's native Model Registry view for the Jena Weather Forecaster. The registry displays all 16 registered model versions, each linked to the MLflow run that produced it via a traceable run ID. Version 9 carries the @champion alias, identifying it as the current production model loaded by the serving container. The alias is managed directly from the noted interface through the "Set alias" action on any version row, with the sidebar tree reflecting the current champion assignment. The breadth of the version history — 16 versions registered across three days of pipeline executions — demonstrates the automated registration and promotion pipeline described in Section 5.3 operating continuously: each successful Airflow pipeline run produces a new candidate version, which is promoted to @champion only if it improves on the current champion's test MAE.
+
+Caption:
+
+Figure 5 — noted's native Model Registry view for the Jena Weather Forecaster model. 16 versions are registered, each linked to its originating MLflow run. Version 9 holds the @champion alias, visible both in the table and the sidebar tree. Alias assignment is managed directly from the noted interface without requiring MLflow UI access. The "Compare Versions" action enables side-by-side metric comparison across selected versions.
+
+
+
+----------------
+
+
+Introductory paragraph (Section 7.3, after the tool system description):
+
+Figure 6 demonstrates the AI assistant's tool system in action. In response to a natural language query requesting the best-performing run and its parameters, the assistant engaged in a clarification dialogue before invoking the get_experiment_runs tool — visible as an orange badge in the response — to query the MLflow tracking backend directly. The assistant identified run 1f951aea as achieving the lowest test_mae_degC of 1.6792°C and returned its full parameter set: model type, architecture config, scaler, lookback window, forecast horizon, training epochs, batch size, and random seed. The leaderboard open simultaneously in the left pane confirms the result, with the identified run highlighted. This interaction illustrates how the assistant bridges natural language queries and structured MLOps data — practitioners can interrogate experiment results, compare configurations, and retrieve lineage information conversationally, without navigating the UI manually.
+
+Caption:
+
+Figure 6 — AI assistant using the get_experiment_runs tool to identify the best-performing run in the Jena Weather Forecasting experiment. The orange tool badge confirms a live MLflow query was executed. The assistant's response lists the full parameter set of the optimal run, which is simultaneously highlighted in the leaderboard on the left. Extended Thinking (chain-of-thought reasoning) is active, visible in the assistant toolbar.
