@@ -10,7 +10,6 @@ import numpy as np
 from tensorflow import keras
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-
 def get_default_callbacks():
     """Return EarlyStopping (patience=6) and ReduceLROnPlateau (patience=3) callbacks."""
     early_stopping = keras.callbacks.EarlyStopping(

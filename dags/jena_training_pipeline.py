@@ -18,9 +18,21 @@ PROJECT_ROOT = "/opt/airflow/dags/jena_weather"
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-# Evidently project ID
-EVIDENTLY_PROJECT_ID = "019d63cb-0b67-7a33-9295-500b1ba0ab90"
+# Evidently
+EVIDENTLY_PROJECT_NAME = "Jena Weather"
 EVIDENTLY_URL = "http://noted-evidently:8000"
+
+
+def _get_or_create_evidently_project():
+    """Get the Evidently project by name, creating it if it doesn't exist."""
+    from evidently.ui.workspace import RemoteWorkspace
+    ws = RemoteWorkspace(EVIDENTLY_URL)
+    matches = [p for p in ws.list_projects() if p.name == EVIDENTLY_PROJECT_NAME]
+    if matches:
+        return ws, matches[0].id
+    project = ws.create_project(EVIDENTLY_PROJECT_NAME)
+    print(f"Created Evidently project: {project.id}")
+    return ws, project.id
 MLFLOW_TRACKING_URI = "http://mlflow:5000"
 MODEL_NAME = "Jena Weather Forecaster"
 
@@ -30,13 +42,14 @@ MODEL_NAME = "Jena Weather Forecaster"
     schedule=None,
     start_date=datetime(2026, 1, 1),
     catchup=False,
-    tags=["jena-weather", "training", "mlops"],
+    tags=["jena_weather", "training", "mlops"],
     params={
         "model_config": "gru_baseline",
         "scaler_config": "standard",
         "epochs": 50,
         "batch_size": 128,
         "seed": 42,
+        "hydra_config_hash": "",
     },
 )
 def jena_training_pipeline():
@@ -112,7 +125,6 @@ def jena_training_pipeline():
         import pandas as pd
         from evidently import Report, Dataset, DataDefinition
         from evidently.presets import DataSummaryPreset
-        from evidently.ui.workspace import RemoteWorkspace
 
         df_feat = pd.read_parquet(preprocess_result["feat_path"])
         feature_cols = preprocess_result["feature_cols"]
@@ -123,8 +135,8 @@ def jena_training_pipeline():
         report = Report([DataSummaryPreset()], tags=["data-quality", "jena-weather", "pipeline"])
         snapshot = report.run(dataset)
 
-        ws = RemoteWorkspace(EVIDENTLY_URL)
-        ws.add_run(EVIDENTLY_PROJECT_ID, snapshot, include_data=False)
+        ws, project_id = _get_or_create_evidently_project()
+        ws.add_run(project_id, snapshot, include_data=False)
 
         print("Data quality report saved to Evidently")
         return {"status": "ok"}
@@ -196,7 +208,7 @@ def jena_training_pipeline():
             model, history = train_pipeline(
                 cfg, X_train, y_train, X_val, y_val,
                 lookback, X_train.shape[2], horizon,
-                epochs=epochs, verbose=0,
+                epochs=epochs, verbose=1,
             )
 
             # Log training metrics
@@ -209,7 +221,7 @@ def jena_training_pipeline():
             from src.models.train_eval import evaluate_scaled_forecasts, evaluate_original_scale_forecasts
             from src.evolution.phenotype import inverse_target_with_scaler
 
-            y_pred = model.predict(X_test, verbose=0)
+            y_pred = model.predict(X_test, verbose=2)
             scaled_metrics = evaluate_scaled_forecasts(y_test, y_pred)
 
             y_test_inv = inverse_target_with_scaler(y_test, scaler, target_idx, len(feature_cols))
@@ -271,7 +283,6 @@ def jena_training_pipeline():
         import pandas as pd
         from evidently import Report, Dataset, DataDefinition
         from evidently.presets import DataDriftPreset
-        from evidently.ui.workspace import RemoteWorkspace
 
         df_train = pd.read_parquet(train_result["train_path"])
         df_test = pd.read_parquet(train_result["test_path"])
@@ -288,8 +299,8 @@ def jena_training_pipeline():
         )
         snapshot = report.run(cur_dataset, ref_dataset)
 
-        ws = RemoteWorkspace(EVIDENTLY_URL)
-        ws.add_run(EVIDENTLY_PROJECT_ID, snapshot, include_data=False)
+        ws, project_id = _get_or_create_evidently_project()
+        ws.add_run(project_id, snapshot, include_data=False)
 
         print("Drift report saved to Evidently")
 
