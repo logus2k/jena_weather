@@ -38,7 +38,7 @@ def build_model_from_cfg(cfg, lookback, n_features, horizon):
 
 
 def train_pipeline(cfg, X_train, y_train, X_val, y_val, lookback, n_features,
-                   horizon, epochs=50, verbose=1):
+                   horizon, epochs=50, verbose=1, es_cfg=None, lr_cfg=None):
     """Build and train a model from config.
 
     Args:
@@ -48,6 +48,10 @@ def train_pipeline(cfg, X_train, y_train, X_val, y_val, lookback, n_features,
         lookback, n_features, horizon: model dimensions
         epochs: max training epochs
         verbose: training verbosity
+        es_cfg: optional early-stopping config (dict or OmegaConf) with
+            `patience` and `restore_best_weights`. Passed to `train_model`.
+        lr_cfg: optional learning-rate-reduction config with `factor`,
+            `patience`, and `min_lr`. Passed to `train_model`.
 
     Returns:
         (model, history) tuple.
@@ -65,6 +69,8 @@ def train_pipeline(cfg, X_train, y_train, X_val, y_val, lookback, n_features,
         batch_size=batch_size,
         epochs=epochs,
         verbose=verbose,
+        es_cfg=es_cfg,
+        lr_cfg=lr_cfg,
     )
 
     return model, history
