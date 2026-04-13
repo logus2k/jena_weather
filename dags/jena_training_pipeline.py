@@ -364,9 +364,12 @@ def jena_training_pipeline():
             feature_cols, target_idx, lookback, horizon,
         )
 
-        # Train
+        # Train. Experiment name matches the project_id so notebook runs,
+        # Run Manager runs, and DAG runs all land in the same MLflow
+        # experiment (noted's run-execute handler uses project_id as the
+        # experiment name too).
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-        mlflow.set_experiment("Jena Weather Forecasting")
+        mlflow.set_experiment("jena_weather")
 
         run_name = f"Pipeline - {selections.get('model', 'model')} / {selections.get('data', 'data')}"
         with mlflow.start_run(run_name=run_name) as run:
