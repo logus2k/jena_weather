@@ -3,5 +3,6 @@
   "default_venv": {
     "name": "venv_jena_weather",
     "runtime_id": "python/3.12"
-  }
+  },
+  "hydra_view": true
 }

@@ -1,7 +1,21 @@
 defaults:
-  - data: default
+  - data: jena_full_dataset
   - model: gru_baseline
-  - training: default
   - scaler: standard
 
 seed: 42
+
+# Training hyperparameters - exposed as Configuration Composer overrides
+# so users can tweak the training regime per run without editing code.
+training:
+  epochs: 50
+  batch_size: 128
+  learning_rate: 2.0e-4
+  clipnorm: 2.0
+  early_stopping:
+    patience: 6
+    restore_best_weights: true
+  lr_reduction:
+    factor: 0.5
+    patience: 3
+    min_lr: 1.0e-5

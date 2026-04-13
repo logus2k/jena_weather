@@ -10,32 +10,59 @@ import numpy as np
 from tensorflow import keras
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-def get_default_callbacks():
-    """Return EarlyStopping (patience=6) and ReduceLROnPlateau (patience=3) callbacks."""
+
+def get_default_callbacks(es_cfg=None, lr_cfg=None):
+    """Return EarlyStopping + ReduceLROnPlateau callbacks.
+
+    Parameters are driven by Hydra config sub-blocks when provided. All
+    values fall back to the project defaults if a sub-block is missing,
+    so older code paths that call `get_default_callbacks()` with no
+    arguments continue to work unchanged.
+
+    Args:
+        es_cfg: `cfg.training.early_stopping` (OmegaConf), expected keys:
+            - patience (int, default 6)
+            - restore_best_weights (bool, default True)
+        lr_cfg: `cfg.training.lr_reduction` (OmegaConf), expected keys:
+            - factor (float, default 0.5)
+            - patience (int, default 3)
+            - min_lr (float, default 1e-5)
+    """
+    es_patience = int(es_cfg.patience) if es_cfg is not None else 6
+    es_restore = bool(es_cfg.restore_best_weights) if es_cfg is not None else True
+    lr_factor = float(lr_cfg.factor) if lr_cfg is not None else 0.5
+    lr_patience = int(lr_cfg.patience) if lr_cfg is not None else 3
+    lr_min = float(lr_cfg.min_lr) if lr_cfg is not None else 1e-5
+
     early_stopping = keras.callbacks.EarlyStopping(
         monitor="val_loss",
-        patience=6,
-        restore_best_weights=True
+        patience=es_patience,
+        restore_best_weights=es_restore,
     )
 
     reduce_lr = keras.callbacks.ReduceLROnPlateau(
         monitor="val_loss",
-        factor=0.5,
-        patience=3,
-        min_lr=1e-5
+        factor=lr_factor,
+        patience=lr_patience,
+        min_lr=lr_min,
     )
 
     return [early_stopping, reduce_lr]
 
 
-def train_model(model, X_train, y_train, X_val, y_val, batch_size=128, epochs=60, verbose=1):
+def train_model(model, X_train, y_train, X_val, y_val,
+                batch_size=128, epochs=60, verbose=1,
+                es_cfg=None, lr_cfg=None):
+    """Standard training wrapper. `es_cfg` and `lr_cfg` are passed through
+    to `get_default_callbacks` so users can drive early stopping and LR
+    reduction from Hydra config."""
     history = model.fit(
         X_train,
         y_train,
         validation_data=(X_val, y_val),
         epochs=epochs,
         batch_size=batch_size,
-        callbacks=get_default_callbacks(),
+        callbacks=get_default_callbacks(es_cfg=es_cfg, lr_cfg=lr_cfg),
         verbose=verbose
     )
     return history
