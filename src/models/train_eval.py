@@ -20,19 +20,19 @@ def get_default_callbacks(es_cfg=None, lr_cfg=None):
     arguments continue to work unchanged.
 
     Args:
-        es_cfg: `cfg.training.early_stopping` (OmegaConf), expected keys:
+        es_cfg: `cfg.training.early_stopping` (OmegaConf DictConfig or plain dict), expected keys:
             - patience (int, default 6)
             - restore_best_weights (bool, default True)
-        lr_cfg: `cfg.training.lr_reduction` (OmegaConf), expected keys:
+        lr_cfg: `cfg.training.lr_reduction` (OmegaConf DictConfig or plain dict), expected keys:
             - factor (float, default 0.5)
             - patience (int, default 3)
             - min_lr (float, default 1e-5)
     """
-    es_patience = int(es_cfg.patience) if es_cfg is not None else 6
-    es_restore = bool(es_cfg.restore_best_weights) if es_cfg is not None else True
-    lr_factor = float(lr_cfg.factor) if lr_cfg is not None else 0.5
-    lr_patience = int(lr_cfg.patience) if lr_cfg is not None else 3
-    lr_min = float(lr_cfg.min_lr) if lr_cfg is not None else 1e-5
+    es_patience = int(es_cfg.get("patience", 6)) if es_cfg is not None else 6
+    es_restore = bool(es_cfg.get("restore_best_weights", True)) if es_cfg is not None else True
+    lr_factor = float(lr_cfg.get("factor", 0.5)) if lr_cfg is not None else 0.5
+    lr_patience = int(lr_cfg.get("patience", 3)) if lr_cfg is not None else 3
+    lr_min = float(lr_cfg.get("min_lr", 1e-5)) if lr_cfg is not None else 1e-5
 
     early_stopping = keras.callbacks.EarlyStopping(
         monitor="val_loss",

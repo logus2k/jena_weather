@@ -427,7 +427,9 @@ def jena_training_pipeline():
                 "test_rmse_degC": original_metrics["rmse"],
             })
 
-            mlflow.tensorflow.log_model(model, "model")
+            from mlflow.models.signature import infer_signature
+            signature = infer_signature(X_train, y_pred)
+            mlflow.tensorflow.log_model(model, name="model", signature=signature)
 
             print(f"Run ID: {run.info.run_id}")
             print(f"MAE: {original_metrics['mae']:.4f} degC")

@@ -1,5 +1,5 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
 
 def compute_saliency_map(model, input_sample, forecast_step=None):
