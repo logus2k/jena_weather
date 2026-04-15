@@ -323,6 +323,10 @@ On the registered model's version card, click **Deploy**. The NDJSON progress ph
 
 For an external-client demonstration, launch the `jena_client` web application from a *noted* terminal. The client auto-populates its Model / Version / Alias dropdowns from MLflow's REST API and selects `@champion` by default. Clicking **Load Model** streams the NDJSON progress, and the frontend renders the 24-hour forecast in real Celsius using the inverse scaler transform described in Section 6.4. The same model that *noted*'s Try It panel exercised is now being consumed from a completely standalone application.
 
+![](images/image7.png)
+
+**Figure 7** - Jena Client Web Application.
+
 ## Step 7 — Evidently reports
 
 The Evidently UI (accessible from the *noted* sidebar icon bar) shows two snapshots generated during the pipeline: a `DataSummaryPreset` tagged `data-quality` from `evidently_quality`, and a `DataDriftPreset` tagged `drift` from `evidently_drift`, the latter with the MLflow `run_id` in its metadata so it is directly linkable to the model trained on that split.
@@ -331,9 +335,7 @@ The Evidently UI (accessible from the *noted* sidebar icon bar) shows two snapsh
 
 To verify the reproducibility story, reopen the notebook, click the Composer, and switch to **Experiment Run** mode. In the Run dropdown, pick the run just completed. The Composer loads the archived `hydra/` bundle from the run's artifacts and pre-populates every selection and override. The baseline badge changes to `RUN <id>` with a green check, confirming that the current selections exactly match the archived run's snapshot. The same configuration can now be re-applied to a new run with a single click, proving that every run is independently reproducible from its own bundle alone.
 
-# 9. Conclusion
-
-## 9.1 Concluding Remarks
+# 9. Conclusions
 
 This project implemented a complete, reproducible, and automated MLOps workflow for multi-step air temperature forecasting using the Jena Climate dataset. Beyond the forecasting task itself, the main contribution lies in the engineering of the surrounding pipeline: versioned data managed with DVC and MinIO, configuration managed hierarchically with Hydra and composed through a dedicated visual panel with a Time Machine for past-run reproduction, orchestration through Airflow with a seven-task DAG that explicitly archives a self-contained Hydra bundle on every run, experiment tracking and model registration through MLflow with automatic champion promotion based on test MAE, and deployment through a FastAPI serving container with an explicit Deploy / Unload / Try It workflow and streaming NDJSON progress.
 
@@ -343,7 +345,7 @@ An additional contribution is the development and use of the *noted* platform it
 
 The project satisfies every final-delivery requirement and extends them with complementary capabilities such as integrated monitoring through Evidently, automated champion promotion, end-to-end lineage chains, per-run Hydra bundle archival, and an in-product AI assistant with ~42 domain skills and structured tool calling. These additions reinforce the project's orientation towards real-world, audit-ready MLOps scenarios.
 
-## 9.2 Future Enhancements
+# 10. Future Enhancements
 
 Several directions can further strengthen the platform and the MLOps workflow developed in this project:
 
