@@ -2,6 +2,7 @@ defaults:
   - data: jena_full_dataset
   - model: gru_baseline
   - scaler: standard
+  - _self_
 
 seed: 42
 
